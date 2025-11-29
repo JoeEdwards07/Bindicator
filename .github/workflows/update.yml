@@ -23,8 +23,7 @@ jobs:
 
       - name: Write service account JSON
         run: |
-          echo "${{ secrets.GCAL_JSON_B64 }}" | base64 --decode > service_account.json
-
+          printf "%s" "${{ secrets.GCAL_JSON_B64 }}" | base64 --decode > service_account.json
 
       - name: Run scraper
         run: python fetch_bins.py
