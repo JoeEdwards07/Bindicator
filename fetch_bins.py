@@ -117,46 +117,46 @@ def run_lookup():
         print(f"[DEBUG] Opening bin lookup page: {BIN_URL}")
         page.goto(BIN_URL, timeout=60000)
 
-        # Step 1: Wait for the main form wizard to appear
-        print("[DEBUG] Waiting for main form wizard to load...")
-        page.locator("form").first.wait_for(state="visible", timeout=45000)
+        # Step 1: wait for iframe to appear
+        print("[DEBUG] Waiting for iframe to load...")
+        iframe_el = page.wait_for_selector("#fillform-frame-1", timeout=45000)
+        frame = iframe_el.content_frame()
+        if not frame:
+            print("[ERROR] Could not get iframe content")
+            browser.close()
+            return None
+        print("[DEBUG] Iframe loaded successfully")
 
-        # Step 2: Wait for postcode input to be visible and fill it
-        print("[DEBUG] Waiting for postcode input field to appear...")
-        postcode_input = page.locator("input[type='text']")
+        # Step 2: wait for postcode input and fill
+        postcode_input = frame.locator("input[type='text']")
         postcode_input.wait_for(state="visible", timeout=30000)
         postcode_input.fill(POSTCODE)
         print(f"[DEBUG] Filled postcode: {POSTCODE}")
 
-        # Step 3: Click 'Find address' button
-        print("[DEBUG] Waiting for 'Find address' button...")
-        find_address_btn = page.locator("button:has-text('Find address')")
+        # Step 3: click 'Find address'
+        find_address_btn = frame.locator("button:has-text('Find address')")
         find_address_btn.wait_for(state="visible", timeout=30000)
         find_address_btn.click()
         print("[DEBUG] Clicked 'Find address' button")
 
-        # Step 4: Wait for address dropdown
-        print("[DEBUG] Waiting for address dropdown to appear...")
-        select_el = page.locator("select")
+        # Step 4: select address
+        select_el = frame.locator("select")
         select_el.wait_for(state="visible", timeout=40000)
         select_el.select_option(label=ADDRESS_TEXT)
         print(f"[DEBUG] Selected address: {ADDRESS_TEXT}")
 
-        # Step 5: Click final 'Find' button to load results
-        print("[DEBUG] Waiting for final 'Find' button to appear...")
-        find_btn2 = page.locator("button:has-text('Find')").first
+        # Step 5: click final 'Find' button to fetch results
+        find_btn2 = frame.locator("button:has-text('Find')").first
         find_btn2.wait_for(state="visible", timeout=20000)
         find_btn2.click()
-        print("[DEBUG] Clicked final 'Find' button to fetch results")
+        print("[DEBUG] Clicked final 'Find' button")
 
-        # Step 6: Wait for results table to be visible
-        print("[DEBUG] Waiting for results table to load...")
-        results_table = page.locator("table")
+        # Step 6: wait for table
+        results_table = frame.locator("table")
         results_table.wait_for(state="visible", timeout=45000)
         print("[DEBUG] Results table is visible, capturing HTML...")
 
-        # Capture HTML for parsing
-        html = page.content()
+        html = frame.content()
         browser.close()
         print(f"[DEBUG] Captured HTML length: {len(html)}")
         return html
