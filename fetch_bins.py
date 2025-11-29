@@ -1,8 +1,4 @@
 # fetch_bins.py
-# Requires: playwright, beautifulsoup4
-# Usage: python fetch_bins.py
-# Outputs: bins.json in the same folder
-
 import json
 import re
 import sys
@@ -10,19 +6,14 @@ from datetime import datetime
 from time import sleep
 
 from bs4 import BeautifulSoup
-
-# Playwright sync API
 from playwright.sync_api import sync_playwright
 
 POSTCODE = "LU4 9AZ"
-ADDRESS_TEXT = "24 Compton Avenue"   # the visible address label to click
-
+ADDRESS_TEXT = "24 Compton Avenue"
 BIN_URL = "https://myforms.luton.gov.uk/service/Find_my_bin_collection_date"
 OUTPUT_FILE = "bins.json"
 
-# helper: parse a date-like string into yyyy-mm-dd
 def parse_date_string(s):
-    # Try common patterns e.g. "14 February 2025", "14/02/2025", "14 Feb 2025"
     s = s.strip()
     patterns = [
         ("%d %B %Y", r"\b\d{1,2}\s+[A-Za-z]+\s+\d{4}\b"),
@@ -42,32 +33,21 @@ def parse_date_string(s):
 
 def extract_bins_from_html(html):
     soup = BeautifulSoup(html, "html.parser")
-
     text = soup.get_text(separator="\n", strip=True)
-    # Debug: output some of the page text
-    print("----- page text snippet (first 500 chars) -----")
-    print(text[:500])
-    print("------------------------------------------------")
 
-    # We'll search for lines that mention bin type and a date nearby.
     lines = [line.strip() for line in text.splitlines() if line.strip()]
-    # join back so we can search context
     full_text = "\n".join(lines)
 
-    # bin keys we want and aliases to match
     mapping = {
         "general": ["general", "black", "refuse", "household", "black bin", "refuse collection"],
         "recycling": ["recycling", "green", "green bin"],
-        "glass": ["glass", "glass box", "glass bin", "black box"]  # Luton uses black box for glass
+        "glass": ["glass", "glass box", "glass bin", "black box"]
     }
 
-    # store first found date for each
     found = {"general": None, "recycling": None, "glass": None}
 
-    # Candidate date regex - look for day month year and also dd/mm/yyyy
     date_rx = r"\b(?:\d{1,2}\s+(?:Jan|Feb|Mar|Apr|May|Jun|Jul|Aug|Sep|Oct|Nov|Dec|January|February|March|April|May|June|July|August|September|October|November|December)\s+\d{4}|\d{1,2}/\d{1,2}/\d{4})\b"
 
-    # Strategy: for each bin alias, find occurrences in text and look +/- 120 characters for a date.
     for key, aliases in mapping.items():
         for alias in aliases:
             for m in re.finditer(re.escape(alias), full_text, flags=re.IGNORECASE):
@@ -78,109 +58,76 @@ def extract_bins_from_html(html):
                 if date_match:
                     parsed = parse_date_string(date_match.group(0))
                     if parsed:
-                        print(f"[DEBUG] Found '{alias}' -> '{date_match.group(0)}' -> {parsed}")
-                        found[key] = parsed
-                        break
-                # fallback: sometimes the date is on the next line(s) — try the next 3 lines
-                # Build small neighbor area:
-                lines_window = full_text[max(0, full_text.rfind("\n", 0, m.start())-200):min(len(full_text), full_text.find("\n", m.end())+200)]
-                md = re.search(date_rx, lines_window, flags=re.IGNORECASE)
-                if md:
-                    parsed = parse_date_string(md.group(0))
-                    if parsed:
-                        print(f"[DEBUG] (fallback) Found '{alias}' -> '{md.group(0)}' -> {parsed}")
                         found[key] = parsed
                         break
             if found[key]:
                 break
 
-    # Final safety: try to find any date lines mentioning "next collection" etc
-    if not any(found.values()):
-        # search for lines containing 'next collection' or 'next collections' with a date
-        for m in re.finditer(r"(next collection|next collections|Next collection|Next collections|collection date|collection dates).{0,120}", full_text, flags=re.IGNORECASE):
-            md = re.search(date_rx, m.group(0))
-            if md:
-                parsed = parse_date_string(md.group(0))
-                if parsed:
-                    print(f"[DEBUG] Found generic next-collection -> {md.group(0)} -> {parsed}")
-                    # put it as a fallback for general
-                    found["general"] = found["general"] or parsed
-
     return found
 
 def run_lookup():
-    print("Starting Playwright...")
+    print("[INFO] Starting Playwright...")
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         page = browser.new_page()
 
-        print(f"[DEBUG] Opening bin lookup page: {BIN_URL}")
-        page.goto(BIN_URL, timeout=60000)
+        print(f"[INFO] Opening {BIN_URL}")
+        page.goto(BIN_URL, timeout=90000)
+        sleep(2)
 
-        # Step 1: wait for iframe to appear
-        print("[DEBUG] Waiting for iframe to load...")
-        iframe_el = page.wait_for_selector("#fillform-frame-1", timeout=45000)
+        # Wait for iframe
+        print("[INFO] Waiting for iframe to appear...")
+        iframe_el = page.wait_for_selector("#fillform-frame-1", timeout=60000)
         frame = iframe_el.content_frame()
         if not frame:
-            print("[ERROR] Could not get iframe content")
+            print("[ERROR] Iframe not found!")
             browser.close()
             return None
-        print("[DEBUG] Iframe loaded successfully")
+        print("[INFO] Iframe loaded successfully")
 
-        # Step 2: wait for postcode input and fill
-        postcode_input = frame.locator("input[type='text']")
-        postcode_input.wait_for(state="visible", timeout=30000)
-        postcode_input.fill(POSTCODE)
-        print(f"[DEBUG] Filled postcode: {POSTCODE}")
+        # Fill postcode
+        print(f"[INFO] Filling postcode: {POSTCODE}")
+        frame.wait_for_selector("input[type='text']", timeout=45000)
+        frame.fill("input[type='text']", POSTCODE)
 
-        # Step 3: click 'Find address'
-        find_address_btn = frame.locator("button:has-text('Find address')")
-        find_address_btn.wait_for(state="visible", timeout=30000)
-        find_address_btn.click()
-        print("[DEBUG] Clicked 'Find address' button")
+        # Click 'Find address'
+        print("[INFO] Clicking 'Find address' button...")
+        frame.wait_for_selector("button:has-text('Find address')", timeout=45000)
+        frame.click("button:has-text('Find address')")
 
-        # Step 4: select address
-        select_el = frame.locator("select")
-        select_el.wait_for(state="visible", timeout=40000)
-        select_el.select_option(label=ADDRESS_TEXT)
-        print(f"[DEBUG] Selected address: {ADDRESS_TEXT}")
+        # Wait for address dropdown
+        print("[INFO] Selecting address from dropdown...")
+        frame.wait_for_selector("select", timeout=45000)
+        frame.select_option("select", label=ADDRESS_TEXT)
 
-        # Step 5: click final 'Find' button to fetch results
-        find_btn2 = frame.locator("button:has-text('Find')").first
-        find_btn2.wait_for(state="visible", timeout=20000)
-        find_btn2.click()
-        print("[DEBUG] Clicked final 'Find' button")
+        # Click final 'Find' button
+        print("[INFO] Clicking final 'Find' button to get results...")
+        frame.wait_for_selector("button:has-text('Find')", timeout=45000)
+        frame.click("button:has-text('Find')")
 
-        # Step 6: wait for table
-        results_table = frame.locator("table")
-        results_table.wait_for(state="visible", timeout=45000)
-        print("[DEBUG] Results table is visible, capturing HTML...")
+        # Wait for table to appear
+        print("[INFO] Waiting for results table...")
+        frame.wait_for_selector("table", timeout=60000)
 
         html = frame.content()
         browser.close()
-        print(f"[DEBUG] Captured HTML length: {len(html)}")
+        print(f"[INFO] Captured HTML length: {len(html)}")
         return html
 
-
-
-
 def main():
-    print("Running bin lookup for:", ADDRESS_TEXT, POSTCODE)
+    print(f"[INFO] Running bin lookup for: {ADDRESS_TEXT} {POSTCODE}")
     html = run_lookup()
     if not html:
-        print("[ERROR] No HTML captured. Exiting with error.")
+        print("[ERROR] Failed to capture HTML. Exiting.")
         sys.exit(1)
 
-    print("[DEBUG] Captured HTML length:", len(html))
     found = extract_bins_from_html(html)
-
-    print("[INFO] Extracted results (may include null values):")
+    print("[INFO] Extracted bin dates:")
     print(json.dumps(found, indent=2))
 
-    # write to bins.json
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
         json.dump(found, f, indent=2)
-    print(f"[OK] Wrote {OUTPUT_FILE}")
+    print(f"[INFO] Wrote {OUTPUT_FILE}")
 
 if __name__ == "__main__":
     main()
