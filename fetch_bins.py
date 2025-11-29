@@ -113,46 +113,41 @@ def run_lookup():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         page = browser.new_page()
-
         print(f"Opening {BIN_URL}")
         page.goto(BIN_URL, timeout=60000)
 
-        # WAIT FOR THE FORM WIZARD TO LOAD
-        print("[DEBUG] Waiting for page wizard to initialise...")
-        page.wait_for_selector("text=Find my bin collection date", timeout=20000)
-
-        # WAIT FOR POSTCODE FIELD TO APPEAR (this takes a few seconds)
+        # Step 1: wait for the first visible input (postcode field)
         print("[DEBUG] Waiting for postcode input...")
-        postcode_input = page.wait_for_selector("input[type='text']", timeout=20000)
+        postcode_input = page.wait_for_selector("input[type='text']", timeout=30000)
         postcode_input.fill(POSTCODE)
         print(f"[DEBUG] Filled postcode: {POSTCODE}")
 
-        # Click "Find address"
+        # Step 2: Click 'Find address'
         print("[DEBUG] Clicking 'Find address' button...")
-        find_button = page.wait_for_selector("button:has-text('Find address')", timeout=15000)
-        find_button.click()
+        find_address_btn = page.wait_for_selector("button:has-text('Find address')", timeout=15000)
+        find_address_btn.click()
 
-        # Wait for dropdown to appear
+        # Step 3: Wait for address dropdown
         print("[DEBUG] Waiting for address dropdown...")
-        select_el = page.wait_for_selector("select", timeout=20000)
-
-        # Select the real address
-        print("[DEBUG] Selecting address option...")
+        select_el = page.wait_for_selector("select", timeout=30000)
         select_el.select_option(label=ADDRESS_TEXT)
+        print(f"[DEBUG] Selected address: {ADDRESS_TEXT}")
 
-        # Click "Find" (second stage)
+        # Step 4: Click 'Find' to fetch results
         print("[DEBUG] Clicking 'Find' button to get results...")
-        find_button2 = page.wait_for_selector("button:has-text('Find')", timeout=15000)
-        find_button2.click()
+        find_btn2 = page.wait_for_selector("button:has-text('Find')", timeout=15000)
+        find_btn2.click()
 
-        # Wait for results
+        # Step 5: Wait for results table
         print("[DEBUG] Waiting for results table...")
-        page.wait_for_selector("text=Your next scheduled bin collection date", timeout=30000)
+        page.wait_for_selector("table", timeout=30000)
 
-        # Capture final HTML
+        # Capture HTML
         html = page.content()
         browser.close()
+        print("[DEBUG] Captured HTML length:", len(html))
         return html
+
 
 
 def main():
