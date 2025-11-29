@@ -113,40 +113,54 @@ def run_lookup():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         page = browser.new_page()
-        print(f"Opening {BIN_URL}")
+
+        print(f"[DEBUG] Opening bin lookup page: {BIN_URL}")
         page.goto(BIN_URL, timeout=60000)
 
-        # Step 1: wait for the first visible input (postcode field)
-        print("[DEBUG] Waiting for postcode input...")
-        postcode_input = page.wait_for_selector("input[type='text']", timeout=30000)
+        # Step 1: Wait for the main form wizard to appear
+        print("[DEBUG] Waiting for main form wizard to load...")
+        page.locator("form").first.wait_for(state="visible", timeout=45000)
+
+        # Step 2: Wait for postcode input to be visible and fill it
+        print("[DEBUG] Waiting for postcode input field to appear...")
+        postcode_input = page.locator("input[type='text']")
+        postcode_input.wait_for(state="visible", timeout=30000)
         postcode_input.fill(POSTCODE)
         print(f"[DEBUG] Filled postcode: {POSTCODE}")
 
-        # Step 2: Click 'Find address'
-        print("[DEBUG] Clicking 'Find address' button...")
-        find_address_btn = page.wait_for_selector("button:has-text('Find address')", timeout=15000)
+        # Step 3: Click 'Find address' button
+        print("[DEBUG] Waiting for 'Find address' button...")
+        find_address_btn = page.locator("button:has-text('Find address')")
+        find_address_btn.wait_for(state="visible", timeout=30000)
         find_address_btn.click()
+        print("[DEBUG] Clicked 'Find address' button")
 
-        # Step 3: Wait for address dropdown
-        print("[DEBUG] Waiting for address dropdown...")
-        select_el = page.wait_for_selector("select", timeout=30000)
+        # Step 4: Wait for address dropdown
+        print("[DEBUG] Waiting for address dropdown to appear...")
+        select_el = page.locator("select")
+        select_el.wait_for(state="visible", timeout=40000)
         select_el.select_option(label=ADDRESS_TEXT)
         print(f"[DEBUG] Selected address: {ADDRESS_TEXT}")
 
-        # Step 4: Click 'Find' to fetch results
-        print("[DEBUG] Clicking 'Find' button to get results...")
-        find_btn2 = page.wait_for_selector("button:has-text('Find')", timeout=15000)
+        # Step 5: Click final 'Find' button to load results
+        print("[DEBUG] Waiting for final 'Find' button to appear...")
+        find_btn2 = page.locator("button:has-text('Find')").first
+        find_btn2.wait_for(state="visible", timeout=20000)
         find_btn2.click()
+        print("[DEBUG] Clicked final 'Find' button to fetch results")
 
-        # Step 5: Wait for results table
-        print("[DEBUG] Waiting for results table...")
-        page.wait_for_selector("table", timeout=30000)
+        # Step 6: Wait for results table to be visible
+        print("[DEBUG] Waiting for results table to load...")
+        results_table = page.locator("table")
+        results_table.wait_for(state="visible", timeout=45000)
+        print("[DEBUG] Results table is visible, capturing HTML...")
 
-        # Capture HTML
+        # Capture HTML for parsing
         html = page.content()
         browser.close()
-        print("[DEBUG] Captured HTML length:", len(html))
+        print(f"[DEBUG] Captured HTML length: {len(html)}")
         return html
+
 
 
 
