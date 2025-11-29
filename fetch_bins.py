@@ -113,125 +113,47 @@ def run_lookup():
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True, args=["--no-sandbox"])
         page = browser.new_page()
+
         print(f"Opening {BIN_URL}")
         page.goto(BIN_URL, timeout=60000)
 
-        # Wait a bit for JS to load
-        sleep(1.2)
+        # WAIT FOR THE FORM WIZARD TO LOAD
+        print("[DEBUG] Waiting for page wizard to initialise...")
+        page.wait_for_selector("text=Find my bin collection date", timeout=20000)
 
-        # Try to find a postcode input - many govService pages use an input with placeholder 'Enter postcode'
-        # We'll attempt multiple selectors
-        postcode_selectors = [
-            "input[name='Postcode']",
-            "input[id*='postcode']",
-            "input[placeholder*='postcode']",
-            "input[type='text']"
-        ]
+        # WAIT FOR POSTCODE FIELD TO APPEAR (this takes a few seconds)
+        print("[DEBUG] Waiting for postcode input...")
+        postcode_input = page.wait_for_selector("input[type='text']", timeout=20000)
+        postcode_input.fill(POSTCODE)
+        print(f"[DEBUG] Filled postcode: {POSTCODE}")
 
-        found_input = None
-        for sel in postcode_selectors:
-            try:
-                if page.query_selector(sel):
-                    found_input = sel
-                    break
-            except Exception:
-                continue
+        # Click "Find address"
+        print("[DEBUG] Clicking 'Find address' button...")
+        find_button = page.wait_for_selector("button:has-text('Find address')", timeout=15000)
+        find_button.click()
 
-        if not found_input:
-            print("[WARN] Could not find postcode input by common selectors. Attempting to type into first visible text input.")
-            try:
-                page.fill("input[type='text']", POSTCODE, timeout=5000)
-            except Exception as e:
-                print("[ERROR] Could not fill any text input:", e)
-                browser.close()
-                return None
+        # Wait for dropdown to appear
+        print("[DEBUG] Waiting for address dropdown...")
+        select_el = page.wait_for_selector("select", timeout=20000)
 
-        else:
-            print(f"[DEBUG] Found postcode selector: {found_input}. Filling with {POSTCODE}")
-            try:
-                page.fill(found_input, POSTCODE, timeout=7000)
-            except Exception as e:
-                print("[WARN] fill() failed for selector, trying generic text input. Error:", e)
-                page.fill("input[type='text']", POSTCODE, timeout=7000)
+        # Select the real address
+        print("[DEBUG] Selecting address option...")
+        select_el.select_option(label=ADDRESS_TEXT)
 
-        # Click a button that looks like 'Find' or 'Search' or 'Lookup'
-        # Try sensible selectors
-        button_selectors = [
-            "button:has-text('Find')",
-            "button:has-text('Find address')",
-            "button:has-text('Search')",
-            "button:has-text('Lookup')",
-            "input[type='submit']"
-        ]
-        clicked = False
-        for bsel in button_selectors:
-            try:
-                btn = page.query_selector(bsel)
-                if btn:
-                    print(f"[DEBUG] Clicking button selector: {bsel}")
-                    btn.click()
-                    clicked = True
-                    break
-            except Exception:
-                continue
+        # Click "Find" (second stage)
+        print("[DEBUG] Clicking 'Find' button to get results...")
+        find_button2 = page.wait_for_selector("button:has-text('Find')", timeout=15000)
+        find_button2.click()
 
-        if not clicked:
-            print("[WARN] Could not find an obvious search button — attempting Enter key press in the postcode field")
-            try:
-                page.keyboard.press("Enter")
-            except Exception as e:
-                print("[ERROR] Could not press Enter:", e)
+        # Wait for results
+        print("[DEBUG] Waiting for results table...")
+        page.wait_for_selector("text=Your next scheduled bin collection date", timeout=30000)
 
-        # Wait for results / address dropdown
-        print("[DEBUG] Waiting for address results to appear...")
-        try:
-            page.wait_for_timeout(2500)
-            # attempt to select the correct address - search for the address text
-            # Many govService pages render a list where each item contains the address string
-            addr_elements = page.query_selector_all(f"text=\"{ADDRESS_TEXT}\"")
-            if not addr_elements:
-                # try case-insensitive partial match using contains
-                print("[DEBUG] exact address text not found - searching for partial text")
-                addr_elements = page.query_selector_all(f"text=Compton Avenue")
-            if addr_elements:
-                print(f"[DEBUG] Found {len(addr_elements)} address entries that match. Clicking the first.")
-                addr_elements[0].click()
-            else:
-                print("[WARN] Address element not found automatically. Trying to pick first address in any address list.")
-                # try clicking the first list item that looks like an address
-                candidates = page.query_selector_all("li, .result, .address, select option")
-                if candidates:
-                    # try clicking the first candidate that contains a number or street
-                    clicked_any = False
-                    for c in candidates:
-                        txt = c.inner_text().strip()
-                        if "Compton" in txt or re.search(r"\b24\b", txt):
-                            print(f"[DEBUG] clicking candidate with text: {txt[:80]}")
-                            try:
-                                c.click()
-                                clicked_any = True
-                                break
-                            except Exception:
-                                continue
-                    if not clicked_any and candidates:
-                        print("[DEBUG] clicking the first generic candidate")
-                        try:
-                            candidates[0].click()
-                        except Exception as e:
-                            print("[WARN] clicking candidate failed:", e)
-                else:
-                    print("[ERROR] No candidate addresses found on page. Will capture HTML for debugging.")
-
-        except Exception as e:
-            print("[WARN] Waiting for address results timed out or errored:", e)
-
-        # give the page a moment to load the final schedule after address selection
-        print("[DEBUG] Sleeping briefly to allow schedule to load...")
-        page.wait_for_timeout(2000)
-
+        # Capture final HTML
         html = page.content()
         browser.close()
         return html
+
 
 def main():
     print("Running bin lookup for:", ADDRESS_TEXT, POSTCODE)
