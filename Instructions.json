@@ -1,20 +1,16 @@
 {
   "events": [
     {
-      "date": "2025-12-02",
-      "keywords": ["Black"]
-    },
-    {
-      "date": "2025-12-02",
-      "keywords": ["Box", "Green"]
-    },
-    {
-      "date": "2025-12-17",
-      "keywords": ["Black"]
-    },
-    {
       "date": "2025-12-23",
       "keywords": ["Green"]
+    },
+    {
+      "date": "2025-12-31",
+      "keywords": ["Black"]
+    },
+    {
+      "date": "2026-01-7",
+      "keywords": ["Box", "Green"]
     }
   ]
 }
