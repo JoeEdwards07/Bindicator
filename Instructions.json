@@ -1,20 +1,32 @@
 {
   "events": [
     {
-      "date": "2025-12-23",
+      "date": "2026-01-21",
       "keywords": ["Green"]
     },
     {
-      "date": "2025-12-25",
-      "keywords": ["Black", "Box"]
-    },
-    {
-      "date": "2025-12-31",
+      "date": "2026-01-21",
       "keywords": ["Black"]
     },
     {
-      "date": "2026-01-16",
-      "keywords": ["Box", "Green", "Black"]
+      "date": "2026-02-04",
+      "keywords": ["Green", "Box"]
+    },
+    {
+      "date": "2026-02-11",
+      "keywords": ["Black"]
+    },
+    {
+      "date": "2026-02-18",
+      "keywords": ["Green"]
+    },
+    {
+      "date": "2026-02-25",
+      "keywords": ["Black"]
+    },
+    {
+      "date": "2026-03-04",
+      "keywords": ["Box", "Green"]
     }
   ]
 }
