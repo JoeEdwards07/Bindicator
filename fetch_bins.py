@@ -30,11 +30,8 @@ KEYWORDS = {
 
 
 def get_credentials():
-    if "GOOGLE_CREDENTIALS" not in os.environ:
-        raise RuntimeError("GOOGLE_CREDENTIALS secret not found!")
-
     creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-    return service_account.Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+    return service_account.Credentials.from_service_account_info(creds_info, scopes=["https://www.googleapis.com/auth/calendar.readonly"])
 
 
 # def get_credentials():
