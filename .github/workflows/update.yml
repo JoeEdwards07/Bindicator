@@ -9,28 +9,23 @@ jobs:
   update:
     runs-on: ubuntu-latest
     steps:
-      # 1️⃣ Checkout code
       - name: Checkout repo
         uses: actions/checkout@v4
 
-      # 2️⃣ Setup Python
       - name: Set up Python
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      # 3️⃣ Install Python dependencies
       - name: Install dependencies
         run: |
           pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
 
-      # 4️⃣ Run scraper
       - name: Run fetch_bins.py
         run: python fetch_bins.py
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-      # 5️⃣ Commit & push Instructions.json if changed
       - name: Commit & push Instructions.json
         run: |
           git config user.name "github-actions"
@@ -41,5 +36,6 @@ jobs:
             git push
           else
             echo "No changes to commit"
+          fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
