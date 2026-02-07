@@ -41,7 +41,7 @@ jobs:
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
-          git add bins.json
+          git add Instructions.json
           git commit -m "Update bin schedule" || echo "No changes to commit"
 
       - name: Push changes
