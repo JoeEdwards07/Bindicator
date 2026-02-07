@@ -18,9 +18,9 @@ SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
 
 # Keywords → Output names
 KEYWORDS = {
-    "Green": ["green"],
-    "Black": ["black", "general", "refuse"],
-    "Box": ["box", "glass"]
+    "Green": ["Green bin collection"],
+    "Black": ["Black bin collection"],
+    "Box": ["Black box collection"]
 }
 
 
@@ -80,6 +80,13 @@ def get_events(service, weeks=12):
         if not page_token:
             break
 
+
+    events = get_events(service)
+        print(f"Fetched {len(events)} events")
+        for e in events:
+            print(e.get("summary"), e.get("start"))
+        
+            
     return events
 
 
