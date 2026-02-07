@@ -90,7 +90,7 @@ def get_events(service, weeks=12):
 
 def parse_events(events):
 
-    parsed = []
+    grouped = {}  # { "2026-03-04": {"Green", "Box"} }
 
     for event in events:
 
@@ -104,21 +104,34 @@ def parse_events(events):
         if not start:
             continue
 
-        keywords = []
+        found_keywords = []
 
         for name, words in KEYWORDS.items():
             if any(word.lower() in title for word in words):
-                keywords.append(name)
+                found_keywords.append(name)
 
-        if not keywords:
+        if not found_keywords:
             continue
 
+        # Create date entry if missing
+        if start not in grouped:
+            grouped[start] = set()
+
+        # Add keywords (set avoids duplicates)
+        for k in found_keywords:
+            grouped[start].add(k)
+
+    # Convert to final list
+    parsed = []
+
+    for date in sorted(grouped.keys()):
         parsed.append({
-            "date": start,
-            "keywords": keywords
+            "date": date,
+            "keywords": sorted(grouped[date])
         })
 
     return parsed
+
 
 
 # -------------------------------------------------------
