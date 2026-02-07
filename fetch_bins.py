@@ -154,7 +154,7 @@ def main():
     print("[INFO] Writing Instructions.json")
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(output, f, indent=2)
+        json.dump(output, f, indent=2, separators=(",", ": "))
 
     print("[OK] Done!")
 
