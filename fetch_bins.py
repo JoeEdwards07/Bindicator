@@ -57,6 +57,8 @@ def get_events(service, weeks=12):
     now = datetime.utcnow().isoformat() + "Z"
     future = (datetime.utcnow() + timedelta(weeks=weeks)).isoformat() + "Z"
 
+    print("Fetching events from", now, "to", future)
+
     events = []
 
     page_token = None
