@@ -28,18 +28,27 @@ KEYWORDS = {
 # AUTH
 # -------------------------------------------------------
 
-def get_credentials():
-    # For GitHub Actions
-    if "GOOGLE_CREDENTIALS" in os.environ:
-        creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
-        return service_account.Credentials.from_service_account_info(
-            creds_info, scopes=SCOPES
-        )
 
-    # For local testing
-    return service_account.Credentials.from_service_account_file(
-        "service_account.json", scopes=SCOPES
-    )
+def get_credentials():
+    if "GOOGLE_CREDENTIALS" not in os.environ:
+        raise RuntimeError("GOOGLE_CREDENTIALS secret not found!")
+
+    creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+    return service_account.Credentials.from_service_account_info(creds_info, scopes=SCOPES)
+
+
+# def get_credentials():
+#     # For GitHub Actions
+#     if "GOOGLE_CREDENTIALS" in os.environ:
+#         creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+#         return service_account.Credentials.from_service_account_info(
+#             creds_info, scopes=SCOPES
+#         )
+
+#     # For local testing
+#     return service_account.Credentials.from_service_account_file(
+#         "service_account.json", scopes=SCOPES
+#     )
 
 
 # -------------------------------------------------------
