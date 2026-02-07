@@ -1,98 +1,150 @@
 import os
 import json
-from datetime import datetime, timezone
+from datetime import datetime, timedelta
 from google.oauth2 import service_account
 from googleapiclient.discovery import build
+
 
 # -------------------------------------------------------
 # CONFIG
 # -------------------------------------------------------
-# Name of your hidden Google Calendar
-CALENDAR_ID = "your_calendar_id@group.calendar.google.com"  # replace with your hidden Bins calendar ID
-# Path to your service account JSON key stored as GitHub secret or local file
-SERVICE_ACCOUNT_FILE = "service_account.json"  # replace with actual path if testing locally
-OUTPUT_FILE = "bins.json"
 
-# Bin type keywords
-BIN_KEYWORDS = {
-    "general": ["general", "black", "refuse", "household"],
-    "recycling": ["recycling", "green", "green bin"],
-    "glass": ["glass", "glass box", "black box"]
+CALENDAR_ID = "9e78b93597b2a5dc4dc1d103f229b71930612888caa0e4901d2c38a08ffcb6eb@group.calendar.google.com"
+
+OUTPUT_FILE = "Instructions.json"
+
+SCOPES = ["https://www.googleapis.com/auth/calendar.readonly"]
+
+
+# Keywords → Output names
+KEYWORDS = {
+    "Green": ["green"],
+    "Black": ["black", "general", "refuse"],
+    "Box": ["box", "glass"]
 }
 
-# -------------------------------------------------------
-# AUTHENTICATION
-# -------------------------------------------------------
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE,
-    scopes=["https://www.googleapis.com/auth/calendar.readonly"]
-)
-
-service = build("calendar", "v3", credentials=credentials)
 
 # -------------------------------------------------------
-# FETCH EVENTS
+# AUTH
 # -------------------------------------------------------
-def get_upcoming_events(max_results=50):
-    now = datetime.utcnow().isoformat() + "Z"  # 'Z' indicates UTC time
-    events_result = service.events().list(
-        calendarId=CALENDAR_ID,
-        timeMin=now,
-        maxResults=max_results,
-        singleEvents=True,
-        orderBy='startTime'
-    ).execute()
-    events = events_result.get('items', [])
+
+def get_credentials():
+    # For GitHub Actions
+    if "GOOGLE_CREDENTIALS" in os.environ:
+        creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+        return service_account.Credentials.from_service_account_info(
+            creds_info, scopes=SCOPES
+        )
+
+    # For local testing
+    return service_account.Credentials.from_service_account_file(
+        "service_account.json", scopes=SCOPES
+    )
+
+
+# -------------------------------------------------------
+# FETCH
+# -------------------------------------------------------
+
+def get_events(service, weeks=12):
+
+    now = datetime.utcnow().isoformat() + "Z"
+    future = (datetime.utcnow() + timedelta(weeks=weeks)).isoformat() + "Z"
+
+    events = []
+
+    page_token = None
+
+    while True:
+        result = service.events().list(
+            calendarId=CALENDAR_ID,
+            timeMin=now,
+            timeMax=future,
+            singleEvents=True,
+            orderBy="startTime",
+            pageToken=page_token,
+        ).execute()
+
+        events.extend(result.get("items", []))
+
+        page_token = result.get("nextPageToken")
+
+        if not page_token:
+            break
+
     return events
 
+
 # -------------------------------------------------------
-# PARSE EVENTS FOR EACH BIN TYPE
+# PARSE
 # -------------------------------------------------------
-def extract_next_bins(events):
-    next_bins = {k: None for k in BIN_KEYWORDS.keys()}
+
+def parse_events(events):
+
+    parsed = []
 
     for event in events:
+
         title = event.get("summary", "").lower()
-        start = event.get("start", {}).get("dateTime") or event.get("start", {}).get("date")
+
+        start = (
+            event.get("start", {}).get("date")
+            or event.get("start", {}).get("dateTime", "")[:10]
+        )
+
         if not start:
             continue
 
-        # Convert date string to ISO format
-        if "T" not in start:
-            # all-day event
-            start_iso = f"{start}T07:00:00"  # assume collection at 7am if all-day
-        else:
-            start_iso = start
+        keywords = []
 
-        # Check which bin type it matches
-        for bin_type, keywords in BIN_KEYWORDS.items():
-            if any(keyword in title for keyword in keywords):
-                # Only keep first upcoming event
-                if next_bins[bin_type] is None:
-                    next_bins[bin_type] = start_iso
-                    print(f"[DEBUG] Found next {bin_type}: {start_iso}")
-    return next_bins
+        for name, words in KEYWORDS.items():
+            if any(word in title for word in words):
+                keywords.append(name)
+
+        if not keywords:
+            continue
+
+        parsed.append({
+            "date": start,
+            "keywords": keywords
+        })
+
+    return parsed
+
 
 # -------------------------------------------------------
 # MAIN
 # -------------------------------------------------------
+
 def main():
-    print("[INFO] Fetching events from Google Calendar...")
-    events = get_upcoming_events()
-    if not events:
-        print("[WARN] No upcoming events found!")
-    else:
-        print(f"[INFO] Found {len(events)} upcoming events.")
 
-    next_bins = extract_next_bins(events)
+    print("[INFO] Authenticating...")
+    creds = get_credentials()
 
-    print("[INFO] Writing bins.json:")
-    print(json.dumps(next_bins, indent=2))
+    service = build("calendar", "v3", credentials=creds)
+
+    print("[INFO] Fetching events...")
+    events = get_events(service)
+
+    print(f"[INFO] Found {len(events)} events")
+
+    parsed = parse_events(events)
+
+    parsed.sort(key=lambda x: x["date"])
+
+    output = {
+        "source": "google-calendar",
+        "updated": datetime.utcnow().isoformat() + "Z",
+        "events": parsed
+    }
+
+    print("[INFO] Writing Instructions.json")
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(next_bins, f, indent=2)
+        json.dump(output, f, indent=2)
 
-    print(f"[OK] {OUTPUT_FILE} updated.")
+    print("[OK] Done!")
+
 
 if __name__ == "__main__":
     main()
