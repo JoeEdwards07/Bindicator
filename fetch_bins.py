@@ -130,6 +130,7 @@ def parse_events(events):
 # -------------------------------------------------------
 # MAIN
 # -------------------------------------------------------
+
 def dump_compact_json(data, file):
 
     text = json.dumps(data, indent=2)
