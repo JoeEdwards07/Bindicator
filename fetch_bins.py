@@ -31,7 +31,7 @@ KEYWORDS = {
 def get_credentials():
     # For GitHub Actions
     if "GOOGLE_CREDENTIALS" in os.environ:
-        creds_info = json.loads(os.environ["GOOGLE_CREDENTIALS"])
+        creds_info = json.loads(os.environ["GCAL_JSON"])
         return service_account.Credentials.from_service_account_info(
             creds_info, scopes=SCOPES
         )
