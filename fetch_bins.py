@@ -130,6 +130,27 @@ def parse_events(events):
 # -------------------------------------------------------
 # MAIN
 # -------------------------------------------------------
+def dump_compact_json(data, file):
+
+    text = json.dumps(data, indent=2)
+
+    # Compact keywords arrays
+    text = text.replace(
+        '\n        "keywords": [\n          ',
+        ' "keywords": ["'
+    )
+
+    text = text.replace(
+        '\n        ]',
+        '"]'
+    )
+
+    text = text.replace(
+        '",\n          "',
+        '","'
+    )
+
+    file.write(text)
 
 def main():
 
@@ -154,7 +175,8 @@ def main():
     print("[INFO] Writing Instructions.json")
 
     with open(OUTPUT_FILE, "w", encoding="utf-8") as f:
-        json.dump(output, f, indent=2, separators=(",", ": "))
+        dump_compact_json(output, f)
+
 
     print("[OK] Done!")
 
