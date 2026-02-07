@@ -3,55 +3,47 @@ name: Update Bin Schedule
 on:
   schedule:
     - cron: "0 3 * * *"  # every day at 3:00 UTC
-  workflow_dispatch:     # manual run
+  workflow_dispatch:     # allows manual trigger
 
 jobs:
   update:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repo
+      # 1️⃣ Checkout the repo
+      - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Set up Python
+      # 2️⃣ Set up Python
+      - name: Set up Python 3.11
         uses: actions/setup-python@v4
         with:
           python-version: "3.11"
 
-      - name: Write service account JSON
+      # 3️⃣ Install dependencies
+      - name: Install Python dependencies
         run: |
-          printf "%s" "${{ secrets.GCAL_JSON_B64 }}" | base64 --decode > service_account.json
-      
-      - name: Debug:check JSON
-        run: |
-          head -n 5 service_account.json
-      
-      - name: Install dependencies
-        run: |
-          pip install google-api-python-client google-auth-httplib2 google-auth-oauthlib
-      
+          pip install --upgrade pip
+          pip install google-api-python-client google-auth google-auth-httplib2 google-auth-oauthlib
+
+      # 4️⃣ Run fetch_bins.py with secret
       - name: Run scraper
         run: python fetch_bins.py
         env:
           GOOGLE_CREDENTIALS: ${{ secrets.GOOGLE_CREDENTIALS }}
 
-
-
-      - name: Commit and push Instructions.json
+      # 5️⃣ Commit and push Instructions.json if changed
+      - name: Commit & push Instructions.json
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add Instructions.json
+          # Only commit if there are changes
           if ! git diff --cached --quiet; then
             git commit -m "Update bin schedule"
-            git push
+            git push origin HEAD
           else
             echo "No changes to commit"
           fi
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-
-      - name: Push changes
-        uses: ad-m/github-push-action@v0.6.0
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
