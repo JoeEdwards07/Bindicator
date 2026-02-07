@@ -36,13 +36,20 @@ jobs:
 
 
 
-
-      - name: Commit bins.json if changed
+      - name: Commit and push Instructions.json
         run: |
           git config user.name "github-actions"
           git config user.email "actions@github.com"
           git add Instructions.json
-          git commit -m "Update bin schedule" || echo "No changes to commit"
+          if ! git diff --cached --quiet; then
+            git commit -m "Update bin schedule"
+            git push
+          else
+            echo "No changes to commit"
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
 
       - name: Push changes
         uses: ad-m/github-push-action@v0.6.0
