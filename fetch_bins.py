@@ -80,14 +80,8 @@ def get_events(service, weeks=12):
         if not page_token:
             break
 
-
-    events = get_events(service)
-    print(f"Fetched {len(events)} events")
-    for e in events:
-        print(e.get("summary"), e.get("start"))
-        
-            
     return events
+
 
 
 # -------------------------------------------------------
@@ -113,7 +107,7 @@ def parse_events(events):
         keywords = []
 
         for name, words in KEYWORDS.items():
-            if any(word in title for word in words):
+            if any(word.lower() in title for word in words):
                 keywords.append(name)
 
         if not keywords:
@@ -148,8 +142,6 @@ def main():
     parsed.sort(key=lambda x: x["date"])
 
     output = {
-        "source": "google-calendar",
-        "updated": datetime.utcnow().isoformat() + "Z",
         "events": parsed
     }
 
