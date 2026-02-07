@@ -82,9 +82,9 @@ def get_events(service, weeks=12):
 
 
     events = get_events(service)
-        print(f"Fetched {len(events)} events")
-        for e in events:
-            print(e.get("summary"), e.get("start"))
+    print(f"Fetched {len(events)} events")
+    for e in events:
+        print(e.get("summary"), e.get("start"))
         
             
     return events
