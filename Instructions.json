@@ -1,3 +1,40 @@
 {
-  "events": []
+  "events": [
+    {
+      "date": "2026-05-13",
+      "keywords": [
+        "Green"
+      ]
+    },
+    {
+      "date": "2026-05-20",
+      "keywords": [
+        "Black"
+      ]
+    },
+    {
+      "date": "2026-05-27",
+      "keywords": [
+        "Green"
+      ]
+    },
+    {
+      "date": "2026-06-03",
+      "keywords": [
+        "Black"
+      ]
+    },
+    {
+      "date": "2026-06-10",
+      "keywords": [
+        "Green"
+      ]
+    },
+    {
+      "date": "2026-06-17",
+      "keywords": [
+        "Black"
+      ]
+    }
+  ]
 }
