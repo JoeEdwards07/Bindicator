@@ -1,9 +1,33 @@
 {
   "events": [
     {
-      "date": "2026-06-17",
+      "date": "2026-06-24",
+      "keywords": [
+        "Green"
+      ]
+    },
+    {
+      "date": "2026-07-01",
       "keywords": [
         "Black"
+      ]
+    },
+    {
+      "date": "2026-07-08",
+      "keywords": [
+        "Green"
+      ]
+    },
+    {
+      "date": "2026-07-15",
+      "keywords": [
+        "Black"
+      ]
+    },
+    {
+      "date": "2026-07-22",
+      "keywords": [
+        "Green"
       ]
     }
   ]
